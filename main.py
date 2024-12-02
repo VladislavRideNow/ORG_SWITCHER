@@ -166,7 +166,7 @@ def main():
 
     # start running the bad_debtor_add function
     print("ORG switcher started...")
-    bad_debtor_add()
+    asyncio.run(bad_debtor_add())
 
     # start the scheduler
     script_timezone = pytz.timezone('Asia/Nicosia')
