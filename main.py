@@ -8,6 +8,7 @@ from ct_api_integration import get_admin_session, user_orgs_switcher
 from database import DB_REPLICA, DB_PROCEDURES
 from app_config import NIGHT_WATCH_ORG, NIGHT_WATCH_EXTEND_ORG
 
+from indian_bad_debtors import bad_debtor_add
 
 
 async def remove_orgs_for_night():
@@ -18,7 +19,7 @@ async def remove_orgs_for_night():
     co.organizationid 
 FROM customerdata c
 LEFT JOIN customerdata__2__organization co 
-    ON c.id = co.customerdataid
+    ON c.id = co.customerdataidc
 WHERE c.isremoved = false
   AND c.isvalidatedbysecurity = true
   AND c.allowdrivewithoutbankcard = false
@@ -163,13 +164,21 @@ def day():
 
 def main():
 
+    # start running the bad_debtor_add function
     print("ORG switcher started...")
+    bad_debtor_add()
 
+    # start the scheduler
     script_timezone = pytz.timezone('Asia/Nicosia')
     scheduler = BlockingScheduler(timezone=script_timezone)
 
+    # daily cron jobs
     scheduler.add_job(day, 'cron', misfire_grace_time=120, hour='6', minute='0')
     scheduler.add_job(night, 'cron', misfire_grace_time=120, hour='21', minute='0')
+
+    # non stop crone jobs
+    scheduler.add_job(bad_debtor_add, 'interval', minutes=10)
+
     scheduler.start()
 
 # Запуск основного цикла
