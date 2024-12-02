@@ -163,6 +163,8 @@ def day():
 
 def main():
 
+    print("ORG switcher started...")
+
     script_timezone = pytz.timezone('Asia/Nicosia')
     scheduler = BlockingScheduler(timezone=script_timezone)
 

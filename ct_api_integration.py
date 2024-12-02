@@ -1,7 +1,6 @@
-import base64
-
-import aiohttp
 import json
+import aiohttp
+import base64
 
 from app_config import MAIN_HOST, ADMIN_AUTH
 
@@ -14,9 +13,6 @@ async def get_admin_session():
                 await login_response.text()
                 return sessid
 
-
-import aiohttp
-import base64
 
 async def user_orgs_switcher(sessid, org_id, user_ids, assign):
     url = f"{MAIN_HOST}/admin/organization/massAssign/{org_id}?sessid={sessid}"
