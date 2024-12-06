@@ -12,7 +12,6 @@ from indian_bad_debtors import bad_debtor_add
 
 
 async def remove_orgs_for_night():
-
     # get users and orgs
     sql_query = f"""SELECT 
     c.userid,
@@ -36,7 +35,6 @@ WHERE c.isremoved = false
         AND co2.organizationid = '{NIGHT_WATCH_EXTEND_ORG}'
   )"""
 
-
     users_list = await DB_REPLICA.execute_query_get_data(query=sql_query)
 
     cyprus_time = datetime.now()
@@ -50,7 +48,6 @@ WHERE c.isremoved = false
 
     for row in users_list:
 
-
         if str(row['organizationid']) == 'd41a9561-3d2d-40a1-99b1-b0ee013eaad3':
             a4.append(str(row['userid']))
         elif str(row['organizationid']) == 'f6477857-4eda-476c-bcf6-ae7500decd0f':
@@ -61,7 +58,6 @@ WHERE c.isremoved = false
             a1.append(str(row['userid']))
 
     s = await get_admin_session()
-
 
     r = await user_orgs_switcher(s, "d41a9561-3d2d-40a1-99b1-b0ee013eaad3", a4, assign=False)
     print(r)
@@ -74,7 +70,6 @@ WHERE c.isremoved = false
 
 
 async def add_orgs_for_day():
-
     # get users and orgs
     sql_query = f"""SELECT user_id, org_id 
 FROM night_watch_log
@@ -103,7 +98,6 @@ WHERE datetime_cyp >= (
 
     s = await get_admin_session()
 
-
     r = await user_orgs_switcher(s, "d41a9561-3d2d-40a1-99b1-b0ee013eaad3", a4, assign=True)
     print(r)
     r = await user_orgs_switcher(s, "f6477857-4eda-476c-bcf6-ae7500decd0f", a3, assign=True)
@@ -131,6 +125,7 @@ async def add_orgs_night_watch():
     s = await get_admin_session()
     r = await user_orgs_switcher(s, NIGHT_WATCH_ORG, users_list, assign=True)
     print(r)
+
 
 async def remove_orgs_night_watch():
     sql_query = f"""SELECT 
@@ -162,11 +157,15 @@ def day():
     asyncio.run(remove_orgs_night_watch())
 
 
-def main():
+def bad_debtor_add_p():
+    asyncio.run(bad_debtor_add())
 
+
+def main():
     # start running the bad_debtor_add function
     print("ORG switcher started...")
-    asyncio.run(bad_debtor_add())
+
+    bad_debtor_add_p()
 
     # start the scheduler
     script_timezone = pytz.timezone('Asia/Nicosia')
@@ -177,13 +176,11 @@ def main():
     scheduler.add_job(night, 'cron', misfire_grace_time=120, hour='21', minute='0')
 
     # non stop crone jobs
-    scheduler.add_job(bad_debtor_add, 'interval', minutes=10)
+    scheduler.add_job(bad_debtor_add_p, 'interval', minutes=10)
 
     scheduler.start()
+
 
 # Запуск основного цикла
 if __name__ == "__main__":
     main()
-
-
-
