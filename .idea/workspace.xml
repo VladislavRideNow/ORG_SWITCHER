@@ -4,13 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f2823e4-39ad-4b94-b534-7c7d86b486f6" name="Changes" comment="Init">
-      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ct_api_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/ct_api_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+    <list default="true" id="5f2823e4-39ad-4b94-b534-7c7d86b486f6" name="Changes" comment="add A9 org switch">
+      <change beforePath="$PROJECT_DIR$/indian_bad_debtors.py" beforeDir="false" afterPath="$PROJECT_DIR$/indian_bad_debtors.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -137,11 +132,53 @@
       <option name="project" value="LOCAL" />
       <updated>1732523274205</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Init">
+      <option name="closed" value="true" />
+      <created>1733145761769</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1733145761769</updated>
+    </task>
+    <task id="LOCAL-00003" summary="add indians bad debt worker">
+      <option name="closed" value="true" />
+      <created>1733147244469</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1733147244469</updated>
+    </task>
+    <task id="LOCAL-00004" summary="add indians bad debt worker">
+      <option name="closed" value="true" />
+      <created>1733147394421</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1733147394421</updated>
+    </task>
+    <task id="LOCAL-00005" summary="add indians bad debt worker">
+      <option name="closed" value="true" />
+      <created>1733492398086</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1733492398086</updated>
+    </task>
+    <task id="LOCAL-00006" summary="add A9 org switch">
+      <option name="closed" value="true" />
+      <created>1733492424397</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1733492424397</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Init" />
-    <option name="LAST_COMMIT_MESSAGE" value="Init" />
+    <MESSAGE value="add indians bad debt worker" />
+    <MESSAGE value="add A9 org switch" />
+    <option name="LAST_COMMIT_MESSAGE" value="add A9 org switch" />
   </component>
 </project>

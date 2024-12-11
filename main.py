@@ -18,7 +18,7 @@ async def remove_orgs_for_night():
     co.organizationid 
 FROM customerdata c
 LEFT JOIN customerdata__2__organization co 
-    ON c.id = co.customerdataidc
+    ON c.id = co.customerdataid 
 WHERE c.isremoved = false
   AND c.isvalidatedbysecurity = true
   AND c.allowdrivewithoutbankcard = false
