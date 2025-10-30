@@ -1,186 +1,166 @@
 import asyncio
-from datetime import datetime
+
 import pytz
+from aiohttp import ClientSession
+from datetime import datetime
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
+from adapters.tg_bot import TG_BOT
+from adapters.ct_mobility_client import CT_MobilityClient
+from Core.Datebase import initialize_db, shutdown_db, DB_REPLICA, DB_TECH
 
-from ct_api_integration import get_admin_session, user_orgs_switcher
-from database import DB_REPLICA, DB_PROCEDURES
-from app_config import NIGHT_WATCH_ORG, NIGHT_WATCH_EXTEND_ORG
+WAITING_FOR_PAYMENT_CONFIG = {
+    "driver license countries": ["IND"],
+    "org_id": ["ffd9b099-daf9-46b7-8c71-ad2200abec28"],
+    "age_limit": 25,
+}
 
-from indian_bad_debtors import bad_debtor_add
+BAD_DEBTOR_CONFIG = {
+    "driver license countries": ["IND"],
+    "org_id": ["f6477857-4eda-476c-bcf6-ae7500decd0f"],
+    "age_limit": 20,
+}
 
-
-async def remove_orgs_for_night():
-    # get users and orgs
-    sql_query = f"""SELECT 
-    c.userid,
-    co.organizationid 
-FROM customerdata c
-LEFT JOIN customerdata__2__organization co 
-    ON c.id = co.customerdataid 
-WHERE c.isremoved = false
-  AND c.isvalidatedbysecurity = true
-  AND c.allowdrivewithoutbankcard = false
-  AND EXTRACT(YEAR FROM AGE(c.birthdate)) >= 18 
-  AND EXTRACT(YEAR FROM AGE(c.birthdate)) <= 24
-  AND co.organizationid IN ('d41a9561-3d2d-40a1-99b1-b0ee013eaad3',
-                             'f6477857-4eda-476c-bcf6-ae7500decd0f',
-                             '01b1ddda-35b5-4360-a5c5-ad5e00746090',
-                             '59d81c7d-e06f-479f-8562-ab4e00fba740')
-  AND NOT EXISTS (
-      SELECT 1
-      FROM customerdata__2__organization co2
-      WHERE co2.customerdataid = c.id
-        AND co2.organizationid = '{NIGHT_WATCH_EXTEND_ORG}'
-  )"""
-
-    users_list = await DB_REPLICA.execute_query_get_data(query=sql_query)
-
-    cyprus_time = datetime.now()
-    r = await DB_PROCEDURES.save_user_organization_data(datetime_cyp=cyprus_time, data=users_list)
-    print(r)
-
-    a1 = []
-    a2 = []
-    a3 = []
-    a4 = []
-
-    for row in users_list:
-
-        if str(row['organizationid']) == 'd41a9561-3d2d-40a1-99b1-b0ee013eaad3':
-            a4.append(str(row['userid']))
-        elif str(row['organizationid']) == 'f6477857-4eda-476c-bcf6-ae7500decd0f':
-            a3.append(str(row['userid']))
-        elif str(row['organizationid']) == '01b1ddda-35b5-4360-a5c5-ad5e00746090':
-            a2.append(str(row['userid']))
-        elif str(row['organizationid']) == '59d81c7d-e06f-479f-8562-ab4e00fba740':
-            a1.append(str(row['userid']))
-
-    s = await get_admin_session()
-
-    r = await user_orgs_switcher(s, "d41a9561-3d2d-40a1-99b1-b0ee013eaad3", a4, assign=False)
-    print(r)
-    r = await user_orgs_switcher(s, "f6477857-4eda-476c-bcf6-ae7500decd0f", a3, assign=False)
-    print(r)
-    r = await user_orgs_switcher(s, "01b1ddda-35b5-4360-a5c5-ad5e00746090", a2, assign=False)
-    print(r)
-    r = await user_orgs_switcher(s, "59d81c7d-e06f-479f-8562-ab4e00fba740", a1, assign=False)
-    print(r)
+CHAT_ID = -954331597
+#CHAT_ID = 368038740
 
 
-async def add_orgs_for_day():
-    # get users and orgs
-    sql_query = f"""SELECT user_id, org_id 
-FROM night_watch_log
-WHERE datetime_cyp >= (
-    SELECT MAX(datetime_cyp)
-    FROM night_watch_log
-)
+async def check_user_in_log(user_id: str):
+    query = f"""select * from integrations.orgswitcher_log 
+where userid = '{user_id}'
 """
-    users_list = await DB_PROCEDURES.execute_query_get_data(query=sql_query)
-
-    a1 = []
-    a2 = []
-    a3 = []
-    a4 = []
-
-    for row in users_list:
-
-        if str(row['org_id']) == 'd41a9561-3d2d-40a1-99b1-b0ee013eaad3':
-            a4.append(str(row['user_id']))
-        elif str(row['org_id']) == 'f6477857-4eda-476c-bcf6-ae7500decd0f':
-            a3.append(str(row['user_id']))
-        elif str(row['org_id']) == '01b1ddda-35b5-4360-a5c5-ad5e00746090':
-            a2.append(str(row['user_id']))
-        elif str(row['org_id']) == '59d81c7d-e06f-479f-8562-ab4e00fba740':
-            a1.append(str(row['user_id']))
-
-    s = await get_admin_session()
-
-    r = await user_orgs_switcher(s, "d41a9561-3d2d-40a1-99b1-b0ee013eaad3", a4, assign=True)
-    print(r)
-    r = await user_orgs_switcher(s, "f6477857-4eda-476c-bcf6-ae7500decd0f", a3, assign=True)
-    print(r)
-    r = await user_orgs_switcher(s, "01b1ddda-35b5-4360-a5c5-ad5e00746090", a2, assign=True)
-    print(r)
-    r = await user_orgs_switcher(s, "59d81c7d-e06f-479f-8562-ab4e00fba740", a1, assign=True)
-    print(r)
+    rows = await DB_TECH.execute_query_get_data(query)
+    print(f"Check log for user {user_id}, found rows: {rows}")
+    if rows is None:
+        return False
+    else:
+        return True
 
 
-async def add_orgs_night_watch():
-    sql_query = f"""SELECT 
-        c.userid
-    FROM customerdata c
-    left join customerdata__2__organization co on c.id  = co.customerdataid 
-    where c.isremoved = false 
-    and c.isvalidatedbysecurity = true 
-    and c.allowdrivewithoutbankcard = false
-    and EXTRACT(YEAR FROM AGE(c.birthdate)) >= 18 and EXTRACT(YEAR FROM AGE(c.birthdate)) <= 24 
-    and co.organizationid not in ('{NIGHT_WATCH_EXTEND_ORG}')"""
+async def main_worker():
+    """
+    Main entry point for ETL worker (for debugging/manual run)
+    """
 
-    users_list = await DB_REPLICA.execute_query_get_data(query=sql_query)
-    users_list = [str(user['userid']) for user in users_list]
+    # INIT DATABASES POOLS
+    await initialize_db()
 
-    s = await get_admin_session()
-    r = await user_orgs_switcher(s, NIGHT_WATCH_ORG, users_list, assign=True)
-    print(r)
+    # YOUR WORKER LOGIC HERE 🇮🇳
+    print("Worker is running...")
 
+    # WAITING FOR PAYMENT FLOW
+    users_by_driver_license_countries = await DB_REPLICA.execute_query_get_data(
+        query=f"""
+            select userid, displayname, c.driverslicencecountry, DATE_PART('year', AGE(c.birthdate)) AS age from customerdata c 
+            where c.driverslicencecountry in ({', '.join(f"'{country}'" for country in WAITING_FOR_PAYMENT_CONFIG['driver license countries'])}) 
+            and c.birthdate is not null and (creationdatetime >= now() - interval '10 days')
+        """
+    )
+    for user in users_by_driver_license_countries:
+        userid = str(user["userid"])
+        user_in_log = await check_user_in_log(user_id=userid)
 
-async def remove_orgs_night_watch():
-    sql_query = f"""SELECT 
-    c.userid,
-    co.organizationid 
-FROM customerdata c
-left join customerdata__2__organization co on c.id  = co.customerdataid 
-where c.isremoved = false 
-and c.isvalidatedbysecurity = true 
-and c.allowdrivewithoutbankcard = false
-and EXTRACT(YEAR FROM AGE(c.birthdate)) >= 18 and EXTRACT(YEAR FROM AGE(c.birthdate)) <= 24 
-and co.organizationid in ('{NIGHT_WATCH_ORG}')"""
+        user_link = f"https://ridenow3.ct.ms/Content/admin/index.html#/modal/customer?id={userid}"
+        if not user_in_log and user["age"] <= WAITING_FOR_PAYMENT_CONFIG['age_limit']:
 
-    users_list = await DB_REPLICA.execute_query_get_data(query=sql_query)
-    users_list = [str(user['userid']) for user in users_list]
+            # Change user's organization assignment logic here if needed
+            async with ClientSession() as session:
+                r = await CT_MobilityClient().user_switch_org(user_ids=[userid],
+                                                              organizations=WAITING_FOR_PAYMENT_CONFIG['org_id'],
+                                                              http_session=session)
 
-    s = await get_admin_session()
-    r = await user_orgs_switcher(s, NIGHT_WATCH_ORG, users_list, assign=False)
-    print(r)
+            insert_result = await DB_TECH.execute_query_put_data_dynamic(
+                table_name="integrations.orgswitcher_log",
+                data={
+                    "userid": userid,
+                    "datetime": datetime.now(),
+                    "assigned_organizations": f"Driver license country requires waiting for payment, assigned orgs Waiting for payment: {WAITING_FOR_PAYMENT_CONFIG['org_id']}",
+                    "api_response": str(r),
+                }
+            )
+            print(f"Inserted log for user {userid}: {insert_result}")
 
+            # Send Telegram notification
+            message = (
+                f"""🔥 <b>New User Alert!</b>  
+👤 <a href="{user_link}">{user['displayname']}</a>  
+🕓 Status set: <b>Waiting for Payment</b>  
+🌍 Driver License Country: <b>{user["driverslicencecountry"]}</b>  
+🎂 Age: <b>{round(user['age'])}</b> years 
+⚙️ Org assignment pending due to license country."""
+            )
+            await TG_BOT.send_message_to_tg(
+                chat_id=CHAT_ID,
+                message_text=message,
+            )
+            print(f"Sent Telegram notification for user {userid}.")
+        else:
+            print(f"User {userid} already in log, skipping.")
 
-def night():
-    asyncio.run(add_orgs_night_watch())
-    asyncio.run(remove_orgs_for_night())
+    # BAD DEBTOR FLOW
+    users_by_driver_license_countries = await DB_REPLICA.execute_query_get_data(
+        query=f"""
+            select userid, displayname, c.driverslicencecountry, DATE_PART('year', AGE(c.birthdate)) AS age from customerdata c 
+            where c.driverslicencecountry not in ({', '.join(f"'{country}'" for country in BAD_DEBTOR_CONFIG['driver license countries'])}) 
+            and c.birthdate is not null and (creationdatetime >= now() - interval '10 days')
+        """
+    )
+    for user in users_by_driver_license_countries:
+        userid = str(user["userid"])
+        user_in_log = await check_user_in_log(user_id=userid)
 
+        user_link = f"https://ridenow3.ct.ms/Content/admin/index.html#/modal/customer?id={userid}"
+        if not user_in_log and user["age"] <= BAD_DEBTOR_CONFIG['age_limit']:
 
-def day():
-    asyncio.run(add_orgs_for_day())
-    asyncio.run(remove_orgs_night_watch())
+            # Change user's organization assignment logic here if needed
+            # async with ClientSession() as session:
+            #     r = await CT_MobilityClient().user_switch_org(user_ids=[userid],
+            #                                                   organizations=BAD_DEBTOR_CONFIG['org_id'],
+            #                                                   http_session=session)
 
+            insert_result = await DB_TECH.execute_query_put_data_dynamic(
+                table_name="integrations.orgswitcher_log",
+                data={
+                    "userid": user["userid"],
+                    "datetime": datetime.now(),
+                    "assigned_organizations": f"Client age requires bad debtor orgs: {BAD_DEBTOR_CONFIG['org_id']}",
+                    #"api_response": str(r),
+                }
+            )
+            print(f"Inserted log for user {user['userid']}: {insert_result}")
 
-def bad_debtor_add_p():
-    asyncio.run(bad_debtor_add())
+            # Send Telegram notification
+            message = (
+                f"""🔥 <b>New User Alert!</b>
+👤 <a href="{user_link}">{user['displayname']}</a>
+🕓 Status set: <b>Bad Debtor</b>
+🌍 Driver License Country: <b>{user["driverslicencecountry"]}</b>
+🎂 Age: <b>{round(user['age'])}</b> years
+⚙️ Org assignment pending due to age criteria."""
+            )
+            await TG_BOT.send_message_to_tg(
+                chat_id=CHAT_ID,
+                message_text=message,
+            )
+            print(f"Sent Telegram notification for user {user['userid']}.")
+
+    # SHUTDOWN DATABASES POOLS
+    await shutdown_db()
 
 
 def main():
-    # start running the bad_debtor_add function
     print("ORG switcher started...")
 
-    bad_debtor_add_p()
-
-    # start the scheduler
     script_timezone = pytz.timezone('Asia/Nicosia')
-    scheduler = BlockingScheduler(timezone=script_timezone)
+    scheduler = AsyncIOScheduler(timezone=script_timezone)
 
-    # daily cron jobs
-    scheduler.add_job(day, 'cron', misfire_grace_time=120, hour='6', minute='0')
-    scheduler.add_job(night, 'cron', misfire_grace_time=120, hour='21', minute='0')
-
-    # non stop crone jobs
-    scheduler.add_job(bad_debtor_add_p, 'interval', minutes=10)
+    # Schedule async job every 2 minutes
+    scheduler.add_job(main_worker, 'interval', minutes=2)
 
     scheduler.start()
 
+    # Keep the event loop running
+    asyncio.get_event_loop().run_forever()
 
-# Запуск основного цикла
 if __name__ == "__main__":
     main()
