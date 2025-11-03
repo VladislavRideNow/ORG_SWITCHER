@@ -113,10 +113,10 @@ async def main_worker():
         if not user_in_log and user["age"] <= BAD_DEBTOR_CONFIG['age_limit']:
 
             # Change user's organization assignment logic here if needed
-            # async with ClientSession() as session:
-            #     r = await CT_MobilityClient().user_switch_org(user_ids=[userid],
-            #                                                   organizations=BAD_DEBTOR_CONFIG['org_id'],
-            #                                                   http_session=session)
+            async with ClientSession() as session:
+                r = await CT_MobilityClient().user_switch_org(user_ids=[userid],
+                                                              organizations=BAD_DEBTOR_CONFIG['org_id'],
+                                                              http_session=session)
 
             insert_result = await DB_TECH.execute_query_put_data_dynamic(
                 table_name="integrations.orgswitcher_log",
@@ -124,7 +124,7 @@ async def main_worker():
                     "userid": user["userid"],
                     "datetime": datetime.now(),
                     "assigned_organizations": f"Client age requires bad debtor orgs: {BAD_DEBTOR_CONFIG['org_id']}",
-                    #"api_response": str(r),
+                    "api_response": str(r),
                 }
             )
             print(f"Inserted log for user {user['userid']}: {insert_result}")
