@@ -5,6 +5,7 @@ from aiohttp import ClientSession
 from app.adapters.ct_mobility_client import CT_MobilityClient
 from app.adapters.tg_bot import TG_BOT
 from app.core.database import DB_REPLICA, DB_TECH, initialize_db, shutdown_db
+from app.core.logger import get_logger
 
 
 WAITING_FOR_PAYMENT_CONFIG = {
@@ -21,6 +22,8 @@ BAD_DEBTOR_CONFIG = {
 
 CHAT_ID = -954331597
 
+logger = get_logger(__name__)
+
 
 class OrgSwitcherWorker:
     async def check_user_in_log(self, user_id: str):
@@ -28,7 +31,6 @@ class OrgSwitcherWorker:
 where userid = '{user_id}'
 """
         rows = await DB_TECH.execute_query_get_data(query)
-        print(f"Check log for user {user_id}, found rows: {rows}")
         if rows is None:
             return False
         return True
@@ -41,7 +43,7 @@ where userid = '{user_id}'
         # INIT DATABASES POOLS
         await initialize_db()
 
-        print("Worker is running...")
+        logger.info("Org switcher worker started.")
 
         # WAITING FOR PAYMENT FLOW
         users_by_driver_license_countries = await DB_REPLICA.execute_query_get_data(
@@ -52,51 +54,57 @@ where userid = '{user_id}'
             """
         )
 
-        if users_by_driver_license_countries is None:
-            users_by_driver_license_countries = []
-        else:
-            for user in users_by_driver_license_countries:
-                userid = str(user["userid"])
-                user_in_log = await self.check_user_in_log(user_id=userid)
+        users_by_driver_license_countries = users_by_driver_license_countries or []
+        logger.info(
+            "Waiting-for-payment candidates: %s",
+            len(users_by_driver_license_countries),
+        )
+        for user in users_by_driver_license_countries:
+            userid = str(user["userid"])
+            user_in_log = await self.check_user_in_log(user_id=userid)
 
-                user_link = f"https://ridenow3.ct.ms/Content/admin/index.html#/modal/customer?id={userid}"
-                if not user_in_log and user["age"] <= WAITING_FOR_PAYMENT_CONFIG["age_limit"]:
-                    async with ClientSession() as session:
-                        r = await CT_MobilityClient().user_switch_org(
-                            user_ids=[userid],
-                            organizations=WAITING_FOR_PAYMENT_CONFIG["org_id"],
-                            http_session=session,
-                        )
-
-                    insert_result = await DB_TECH.execute_query_put_data_dynamic(
-                        table_name="integrations.orgswitcher_log",
-                        data={
-                            "userid": userid,
-                            "datetime": datetime.now(),
-                            "assigned_organizations": (
-                                "Driver license country requires waiting for payment, "
-                                f"assigned orgs Waiting for payment: {WAITING_FOR_PAYMENT_CONFIG['org_id']}"
-                            ),
-                            "api_response": str(r),
-                        },
+            user_link = f"https://ridenow3.ct.ms/Content/admin/index.html#/modal/customer?id={userid}"
+            if not user_in_log and user["age"] <= WAITING_FOR_PAYMENT_CONFIG["age_limit"]:
+                async with ClientSession() as session:
+                    r = await CT_MobilityClient().user_switch_org(
+                        user_ids=[userid],
+                        organizations=WAITING_FOR_PAYMENT_CONFIG["org_id"],
+                        http_session=session,
                     )
-                    print(f"Inserted log for user {userid}: {insert_result}")
 
-                    message = (
-                        f"""🔥 <b>New User Alert!</b>  
+                insert_result = await DB_TECH.execute_query_put_data_dynamic(
+                    table_name="integrations.orgswitcher_log",
+                    data={
+                        "userid": userid,
+                        "datetime": datetime.now(),
+                        "assigned_organizations": (
+                            "Driver license country requires waiting for payment, "
+                            f"assigned orgs Waiting for payment: {WAITING_FOR_PAYMENT_CONFIG['org_id']}"
+                        ),
+                        "api_response": str(r),
+                    },
+                )
+
+                message = (
+                    f"""🔥 <b>New User Alert!</b>  
 👤 <a href="{user_link}">{user['displayname']}</a>  
 🕓 Status set: <b>Waiting for Payment</b>  
 🌍 Driver License Country: <b>{user["driverslicencecountry"]}</b>  
 🎂 Age: <b>{round(user['age'])}</b> years 
 ⚙️ Org assignment pending due to license country."""
-                    )
-                    await TG_BOT.send_message_to_tg(
-                        chat_id=CHAT_ID,
-                        message_text=message,
-                    )
-                    print(f"Sent Telegram notification for user {userid}.")
-                else:
-                    print(f"User {userid} already in log, skipping.")
+                )
+                await TG_BOT.send_message_to_tg(
+                    chat_id=CHAT_ID,
+                    message_text=message,
+                )
+                logger.info(
+                    "Waiting-for-payment assigned for user=%s response=%s insert=%s",
+                    userid,
+                    r,
+                    insert_result,
+                )
+            else:
+                logger.debug("Skipping waiting-for-payment user=%s in_log=%s", userid, user_in_log)
 
         # BAD DEBTOR FLOW
         users_by_driver_license_countries = await DB_REPLICA.execute_query_get_data(
@@ -105,6 +113,10 @@ where userid = '{user_id}'
                 where c.driverslicencecountry not in ({', '.join(f"'{country}'" for country in BAD_DEBTOR_CONFIG['driver license countries'])}) 
                 and c.birthdate is not null and (creationdatetime >= now() - interval '3 days')
             """
+        )
+        logger.info(
+            "Bad-debtor candidates: %s",
+            len(users_by_driver_license_countries),
         )
         for user in users_by_driver_license_countries:
             userid = str(user["userid"])
@@ -144,7 +156,15 @@ where userid = '{user_id}'
                     chat_id=CHAT_ID,
                     message_text=message,
                 )
-                print(f"Sent Telegram notification for user {user['userid']}.")
+                logger.info(
+                    "Bad-debtor assigned for user=%s response=%s insert=%s",
+                    userid,
+                    r,
+                    insert_result,
+                )
+            else:
+                logger.debug("Skipping bad-debtor user=%s in_log=%s", userid, user_in_log)
 
         await shutdown_db()
+        logger.info("Org switcher worker finished.")
 
