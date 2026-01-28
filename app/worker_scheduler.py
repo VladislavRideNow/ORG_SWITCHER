@@ -1,10 +1,12 @@
+import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.core.logger import get_logger
 from app.workers.org_switcher_worker import OrgSwitcherWorker
+from app.workers.a4_special_cars_worker import A4SpecialCarsWorker
 
 logger = get_logger(__name__)
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Nicosia"))
 
 
 def setup_jobs():
@@ -13,6 +15,11 @@ def setup_jobs():
             "name": "org_switcher",
             "func": OrgSwitcherWorker().main_worker,
             "cron": {"minute": "*/2", "second": 20},
+        },
+        {
+            "name": "a4_special_cars",
+            "func": A4SpecialCarsWorker().main_worker,
+            "cron": {"hour": 2, "minute": 0, "second": 0},
         },
     ]
 
