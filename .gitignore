@@ -1,0 +1,32 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+cleanenv/
+
+# Environment/config
+.env
+.env.*
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+
+# Logs and runtime
+*.log
+*.pid
+
+# IDE / editor
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+Desktop.ini
+
