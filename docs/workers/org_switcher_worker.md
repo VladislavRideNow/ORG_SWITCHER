@@ -50,3 +50,4 @@ Use main worker from Python:
 python -c "import asyncio; from app.workers.org_switcher_worker import OrgSwitcherWorker; asyncio.run(OrgSwitcherWorker().main_worker())"
 ```
 
+

@@ -16,11 +16,11 @@ def setup_jobs():
             "func": OrgSwitcherWorker().main_worker,
             "cron": {"minute": "*/2", "second": 20},
         },
-        {
-            "name": "a4_special_cars",
-            "func": A4SpecialCarsWorker().main_worker,
-            "cron": {"hour": 2, "minute": 0, "second": 0},
-        },
+        # {
+        #     "name": "a4_special_cars",
+        #     "func": A4SpecialCarsWorker().main_worker,
+        #     "cron": {"hour": 2, "minute": 0, "second": 0},
+        # },
     ]
 
     for job in jobs:

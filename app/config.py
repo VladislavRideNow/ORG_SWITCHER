@@ -40,3 +40,9 @@ CT_MAIN_HOST = os.getenv("CT_MAIN_HOST")
 # Telegram Bot Token
 CAR_BOT_TOKEN = os.getenv("CAR_BOT_TOKEN")
 
+# Admin session id for /admin/events/customer requests
+CARTREK_SESSION_ID = os.getenv("CARTREK_SESSION_ID")
+
+# Admin sessid cookie (set-cookie: sessid=...)
+CARTREK_SESSID = os.getenv("CARTREK_SESSID")
+
