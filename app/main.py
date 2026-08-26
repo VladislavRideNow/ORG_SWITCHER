@@ -10,3 +10,9 @@ async def _run():
 
 def main():
     asyncio.run(_run())
+
+
+if __name__ == "__main__":
+    from app.workers.customer_events_exporter import CustomerEventsExporter
+
+    asyncio.run(CustomerEventsExporter().main_worker())
