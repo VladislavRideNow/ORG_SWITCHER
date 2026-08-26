@@ -9,13 +9,14 @@ from app.core.logger import get_logger
 
 
 WAITING_FOR_PAYMENT_CONFIG = {
-    "driver license countries": ["IND"],
+    "driver license countries": ["IND", "PRT"],
     "org_id": ["ffd9b099-daf9-46b7-8c71-ad2200abec28"],
     "age_limit": 100,
 }
 
 BAD_DEBTOR_CONFIG = {
-    "driver license countries": ["IND"],
+    # Countries handled by the waiting-for-payment flow are excluded here.
+    "driver license countries": ["IND", "PRT"],
     "org_id": ["f6477857-4eda-476c-bcf6-ae7500decd0f"],
     "age_limit": 21,
 }
